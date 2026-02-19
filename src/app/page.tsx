@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { FloatingShapes } from "@/components/SquidShapes";
+import { MuleyLogoImage, MuleyBadge } from "@/components/MuleyLogo";
+import SquidDoll from "@/components/SquidDoll";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -32,14 +34,14 @@ export default function Home() {
       <div className="scanlines fixed inset-0 pointer-events-none z-10" />
 
       <div className="relative z-20 text-center px-6">
-        {/* Squid Game shapes header */}
+        {/* Muley logo (official) + Squid Game shapes */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-center gap-6 mb-8"
+          className="flex items-center justify-center gap-4 md:gap-8 mb-6"
         >
-          <div className="w-10 h-10 rounded-full border-3 border-squid-pink" />
-          <svg viewBox="0 0 100 100" className="w-10 h-10">
+          <div className="w-10 h-10 rounded-full border-3 border-squid-pink shrink-0" />
+          <svg viewBox="0 0 100 100" className="w-10 h-10 shrink-0">
             <polygon
               points="50,5 95,95 5,95"
               fill="none"
@@ -47,7 +49,16 @@ export default function Home() {
               strokeWidth="6"
             />
           </svg>
-          <div className="w-10 h-10 border-3 border-squid-pink" />
+          <MuleyLogoImage size={100} className="shrink-0" />
+          <svg viewBox="0 0 100 100" className="w-10 h-10 shrink-0">
+            <polygon
+              points="50,5 95,95 5,95"
+              fill="none"
+              stroke="#FF287E"
+              strokeWidth="6"
+            />
+          </svg>
+          <div className="w-10 h-10 border-3 border-squid-pink shrink-0" />
         </motion.div>
 
         {/* Title */}
@@ -75,10 +86,19 @@ export default function Home() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="font-[family-name:var(--font-heading)] text-3xl md:text-5xl text-squid-green mb-12 tracking-wider"
+          className="font-[family-name:var(--font-heading)] text-3xl md:text-5xl text-squid-green mb-4 tracking-wider"
         >
           HOW WE AI
         </motion.h2>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="mb-10"
+        >
+          <MuleyBadge />
+        </motion.div>
 
         <motion.p
           initial={{ opacity: 0 }}
@@ -122,6 +142,11 @@ export default function Home() {
             Admin
           </Link>
         </motion.div>
+      </div>
+
+      {/* Squid Game doll - bottom right */}
+      <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 z-20">
+        <SquidDoll />
       </div>
 
       {/* Bottom decoration */}

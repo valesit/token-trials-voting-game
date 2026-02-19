@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
+import MuleyLogo from "@/components/MuleyLogo";
 import { Session, Participant } from "@/lib/types";
 import { FloatingShapes } from "@/components/SquidShapes";
 import Link from "next/link";
@@ -59,9 +60,12 @@ export default function LeaderboardPage() {
           >
             &larr; Back to Home
           </Link>
-          <h1 className="font-[family-name:var(--font-heading)] text-5xl md:text-7xl text-squid-pink glitch-text mt-4 mb-2">
-            LEADERBOARD
-          </h1>
+          <div className="flex items-center justify-center gap-4 mt-4 mb-2">
+            <MuleyLogo size="md" animated variant="squid" />
+            <h1 className="font-[family-name:var(--font-heading)] text-5xl md:text-7xl text-squid-pink glitch-text">
+              LEADERBOARD
+            </h1>
+          </div>
           <div className="flex items-center justify-center gap-4 mb-4">
             <div className="w-3 h-3 rounded-full border border-squid-pink" />
             <svg viewBox="0 0 100 100" className="w-3 h-3">
@@ -92,7 +96,7 @@ export default function LeaderboardPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="text-center"
                 >
-                  <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-3 border-squid-green shadow-[0_0_20px_rgba(3,196,161,0.3)] mx-auto mb-2">
+                  <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-3 border-squid-green shadow-[0_0_20px_rgba(0,181,226,0.3)] mx-auto mb-2">
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -169,7 +173,7 @@ export default function LeaderboardPage() {
                           className={`relative rounded-2xl overflow-hidden border-2 ${
                             isEliminated
                               ? "border-squid-pink/30"
-                              : "border-squid-green shadow-[0_0_15px_rgba(3,196,161,0.2)]"
+                              : "border-squid-green shadow-[0_0_15px_rgba(0,181,226,0.2)]"
                           } bg-squid-dark`}
                         >
                           {/* Player number */}

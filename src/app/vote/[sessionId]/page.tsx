@@ -9,6 +9,7 @@ import { getDeviceId } from "@/lib/device-id";
 import ParticipantCard from "@/components/ParticipantCard";
 import EliminationOverlay from "@/components/EliminationOverlay";
 import { FloatingShapes } from "@/components/SquidShapes";
+import MuleyLogo from "@/components/MuleyLogo";
 
 export default function VotePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -128,9 +129,12 @@ export default function VotePage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="font-[family-name:var(--font-heading)] text-4xl md:text-5xl text-squid-pink tracking-wider glitch-text">
-            {session.title || `WEEK ${session.week_number}`}
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <MuleyLogo size="sm" animated variant="squid" />
+            <h1 className="font-[family-name:var(--font-heading)] text-4xl md:text-5xl text-squid-pink tracking-wider glitch-text">
+              {session.title || `WEEK ${session.week_number}`}
+            </h1>
+          </div>
           <div className="flex items-center justify-center gap-4 mt-2">
             <div className="w-3 h-3 rounded-full border border-squid-pink" />
             <svg viewBox="0 0 100 100" className="w-3 h-3">

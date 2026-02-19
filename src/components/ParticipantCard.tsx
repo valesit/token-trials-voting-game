@@ -39,7 +39,7 @@ export default function ParticipantCard({
         relative overflow-hidden rounded-2xl border-2 transition-all
         ${disabled ? "cursor-default" : "cursor-pointer"}
         ${selected
-          ? "border-squid-green shadow-[0_0_30px_rgba(3,196,161,0.5)]"
+          ? "border-squid-green shadow-[0_0_30px_rgba(0,181,226,0.5)]"
           : "border-squid-grey hover:border-squid-pink"
         }
         ${isEliminated && revealMode ? "opacity-60" : ""}

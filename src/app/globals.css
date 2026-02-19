@@ -3,8 +3,9 @@
 @theme inline {
   --color-squid-pink: #FF287E;
   --color-squid-pink-dark: #cc1f64;
-  --color-squid-green: #03C4A1;
-  --color-squid-green-dark: #029b7f;
+  --color-squid-green: #00B5E2;
+  --color-squid-green-dark: #0099c4;
+  --color-muley-blue: #00B5E2;
   --color-squid-dark: #1a1a2e;
   --color-squid-darker: #0f0f1a;
   --color-squid-black: #080810;
@@ -34,11 +35,11 @@ body {
 }
 
 @keyframes glitch-color {
-  0% { text-shadow: 2px 0 #FF287E, -2px 0 #03C4A1; }
-  25% { text-shadow: -2px 0 #FF287E, 2px 0 #03C4A1; }
-  50% { text-shadow: 2px 2px #FF287E, -2px -2px #03C4A1; }
-  75% { text-shadow: -2px -2px #FF287E, 2px 2px #03C4A1; }
-  100% { text-shadow: 2px 0 #FF287E, -2px 0 #03C4A1; }
+  0% { text-shadow: 2px 0 #FF287E, -2px 0 #00B5E2; }
+  25% { text-shadow: -2px 0 #FF287E, 2px 0 #00B5E2; }
+  50% { text-shadow: 2px 2px #FF287E, -2px -2px #00B5E2; }
+  75% { text-shadow: -2px -2px #FF287E, 2px 2px #00B5E2; }
+  100% { text-shadow: 2px 0 #FF287E, -2px 0 #00B5E2; }
 }
 
 @keyframes pulse-glow {

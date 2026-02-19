@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { FloatingShapes } from "@/components/SquidShapes";
+import MuleyLogo from "@/components/MuleyLogo";
 
 export default function HostLogin() {
   const [password, setPassword] = useState("");
@@ -40,10 +41,10 @@ export default function HostLogin() {
         className="relative z-20 w-full max-w-md px-6"
       >
         <div className="bg-squid-dark border border-squid-grey rounded-2xl p-8">
-          {/* Squid Game mask icon */}
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-full border-4 border-squid-pink flex items-center justify-center">
-              <svg viewBox="0 0 100 100" className="w-8 h-8">
+          <div className="flex justify-center gap-4 items-center mb-6">
+            <MuleyLogo size="md" animated variant="squid" />
+            <div className="w-12 h-12 rounded-full border-4 border-squid-pink flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 100 100" className="w-6 h-6">
                 <polygon
                   points="50,15 85,85 15,85"
                   fill="none"

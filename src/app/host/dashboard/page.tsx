@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Session, Participant, SessionStatus } from "@/lib/types";
 import SoundController from "@/components/SoundController";
 import EliminationOverlay from "@/components/EliminationOverlay";
+import MuleyLogo from "@/components/MuleyLogo";
 
 export default function HostDashboard() {
   const [sessions, setSessions] = useState<(Session & { participants: Participant[] })[]>([]);
@@ -114,11 +115,14 @@ export default function HostDashboard() {
 
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="font-[family-name:var(--font-heading)] text-4xl md:text-5xl text-squid-pink tracking-wider">
-            GAME MASTER
-          </h1>
-          <p className="text-squid-light/40 text-sm">How We AI - Control Panel</p>
+        <div className="flex items-center gap-4">
+          <MuleyLogo size="md" animated variant="squid" className="shrink-0" />
+          <div>
+            <h1 className="font-[family-name:var(--font-heading)] text-4xl md:text-5xl text-squid-pink tracking-wider">
+              GAME MASTER
+            </h1>
+            <p className="text-squid-light/40 text-sm">How We AI - Control Panel · MuleSoft SEs</p>
+          </div>
         </div>
         <SoundController
           isVoting={currentSession?.status === "voting"}

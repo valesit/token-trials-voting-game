@@ -98,7 +98,7 @@ export default function EliminationOverlay({
             <div className="flex gap-6">
               {survivors.map((p) => (
                 <div key={p.id} className="text-center">
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-squid-green shadow-[0_0_30px_rgba(3,196,161,0.4)] mx-auto mb-2">
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-squid-green shadow-[0_0_30px_rgba(0,181,226,0.4)] mx-auto mb-2">
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
