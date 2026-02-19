@@ -1,65 +1,136 @@
-import Image from "next/image";
+"use client";
+
+import { motion } from "framer-motion";
+import { FloatingShapes } from "@/components/SquidShapes";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { Session } from "@/lib/types";
 
 export default function Home() {
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    async function fetchActive() {
+      const { data } = await supabase
+        .from("sessions")
+        .select("*")
+        .in("status", ["lobby", "voting", "results"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (data) setActiveSession(data);
+    }
+    fetchActive();
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+      <FloatingShapes />
+
+      {/* Scanline effect */}
+      <div className="scanlines fixed inset-0 pointer-events-none z-10" />
+
+      <div className="relative z-20 text-center px-6">
+        {/* Squid Game shapes header */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-center gap-6 mb-8"
+        >
+          <div className="w-10 h-10 rounded-full border-3 border-squid-pink" />
+          <svg viewBox="0 0 100 100" className="w-10 h-10">
+            <polygon
+              points="50,5 95,95 5,95"
+              fill="none"
+              stroke="#FF287E"
+              strokeWidth="6"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </svg>
+          <div className="w-10 h-10 border-3 border-squid-pink" />
+        </motion.div>
+
+        {/* Title */}
+        <motion.h1
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, type: "spring" }}
+          className="font-[family-name:var(--font-heading)] text-6xl md:text-8xl lg:text-9xl text-squid-pink glitch-text mb-4 leading-none"
+        >
+          MULEY SE AI
+          <br />
+          SQUID GAMES
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-squid-light/60 text-lg md:text-xl mb-2 tracking-widest uppercase"
+        >
+          Presented by
+        </motion.p>
+
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="font-[family-name:var(--font-heading)] text-3xl md:text-5xl text-squid-green mb-12 tracking-wider"
+        >
+          HOW WE AI
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="text-squid-light/50 max-w-lg mx-auto mb-12 text-base"
+        >
+          4 SE&apos;s enter. 2 survive. Vote for the best AI demo each week.
+          The top performers advance to the quarter finals.
+        </motion.p>
+
+        {/* Action buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+        >
+          {activeSession && (
+            <Link
+              href={`/vote/${activeSession.id}`}
+              className="px-8 py-4 bg-squid-pink text-white font-[family-name:var(--font-heading)] text-2xl tracking-wider rounded-xl hover:bg-squid-pink-dark transition-all pulse-glow"
+            >
+              {activeSession.status === "voting"
+                ? "VOTE NOW"
+                : "JOIN SESSION"}
+            </Link>
+          )}
+
+          <Link
+            href="/leaderboard"
+            className="px-8 py-4 border-2 border-squid-green text-squid-green font-[family-name:var(--font-heading)] text-2xl tracking-wider rounded-xl hover:bg-squid-green hover:text-squid-black transition-all"
           >
-            Documentation
-          </a>
-        </div>
-      </main>
+            LEADERBOARD
+          </Link>
+
+          <Link
+            href="/host"
+            className="px-6 py-3 border border-squid-grey text-squid-light/40 text-sm rounded-xl hover:border-squid-light/40 hover:text-squid-light/60 transition-all"
+          >
+            Admin
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* Bottom decoration */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.3 }}
+        transition={{ delay: 1.2 }}
+        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-squid-pink to-transparent"
+      />
     </div>
   );
 }

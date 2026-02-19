@@ -1,0 +1,64 @@
+-- Muley SE AI Squid Games - Database Schema
+-- Run this in your Supabase SQL Editor to set up the database.
+
+CREATE TABLE sessions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title TEXT NOT NULL,
+  week_number INTEGER NOT NULL,
+  session_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  status TEXT NOT NULL DEFAULT 'lobby'
+    CHECK (status IN ('lobby', 'voting', 'results', 'completed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE participants (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  topic TEXT NOT NULL DEFAULT '',
+  image_url TEXT NOT NULL DEFAULT '',
+  player_number INTEGER NOT NULL CHECK (player_number BETWEEN 1 AND 4),
+  status TEXT NOT NULL DEFAULT 'alive'
+    CHECK (status IN ('alive', 'eliminated')),
+  vote_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE votes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  participant_id UUID NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
+  device_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(session_id, device_id)
+);
+
+-- Enable Realtime for live updates
+ALTER PUBLICATION supabase_realtime ADD TABLE sessions;
+ALTER PUBLICATION supabase_realtime ADD TABLE participants;
+
+-- Row Level Security
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
+
+-- Public read access
+CREATE POLICY "Anyone can read sessions"
+  ON sessions FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can read participants"
+  ON participants FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can read votes"
+  ON votes FOR SELECT USING (true);
+
+-- Votes can only be inserted when the session is in 'voting' status
+CREATE POLICY "Insert votes only during voting phase"
+  ON votes FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM sessions
+      WHERE sessions.id = votes.session_id
+        AND sessions.status = 'voting'
+    )
+  );
