@@ -64,10 +64,9 @@ export default function VotePage() {
         .eq("season_id", sessionData.season_id);
 
       if (seasonSessions) {
-        const total = seasonSessions.reduce(
-          (sum, s) => sum + (s.pot_contribution || 25),
-          0
-        );
+        const total = seasonSessions
+          .filter((s) => !s.is_finale)
+          .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
         setRunningPotTotal(total);
 
         const previous = seasonSessions
@@ -75,7 +74,7 @@ export default function VotePage() {
             (s) =>
               !s.is_finale && s.week_number < sessionData.week_number
           )
-          .reduce((sum, s) => sum + (s.pot_contribution || 25), 0);
+          .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
         setPreviousPotTotal(previous);
       }
     }

@@ -261,7 +261,7 @@ export default function LeaderboardPage() {
                                 )}
                                 {p.demo_url && (
                                   <a
-                                    href={p.demo_url}
+                                    href={p.demo_url.match(/^https?:\/\//) ? p.demo_url : `https://${p.demo_url}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 mt-1 text-xs text-squid-green hover:text-squid-green/80 transition-colors"

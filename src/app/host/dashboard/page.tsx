@@ -49,11 +49,13 @@ export default function HostDashboard() {
   const eliminated = participants.filter((p) => p.status === "eliminated");
   const survivors = participants.filter((p) => p.status === "alive");
 
-  const runningPotTotal = activeSeasonSessions.reduce((sum, s) => sum + (s.pot_contribution || 25), 0);
+  const runningPotTotal = activeSeasonSessions
+    .filter((s) => !s.is_finale)
+    .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
   const previousPotTotal = currentSession
     ? activeSeasonSessions
         .filter((s) => s.week_number < currentSession.week_number && !s.is_finale)
-        .reduce((sum, s) => sum + (s.pot_contribution || 25), 0)
+        .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0)
     : 0;
 
   async function createSeason() {
@@ -618,7 +620,7 @@ export default function HostDashboard() {
                                 <div className="flex items-center gap-2">
                                   {p.demo_url ? (
                                     <a
-                                      href={p.demo_url}
+                                      href={p.demo_url.match(/^https?:\/\//) ? p.demo_url : `https://${p.demo_url}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs text-squid-green hover:underline"

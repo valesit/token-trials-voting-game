@@ -108,7 +108,7 @@ export default function ParticipantCard({
         )}
         {participant.demo_url && (
           <a
-            href={participant.demo_url}
+            href={participant.demo_url.match(/^https?:\/\//) ? participant.demo_url : `https://${participant.demo_url}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
