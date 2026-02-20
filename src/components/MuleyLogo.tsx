@@ -111,7 +111,7 @@ export function MuleyLogoImage({
         alt="Muley - MuleSoft"
         width={size}
         height={size}
-        className="object-contain drop-shadow-[0_0_12px_rgba(0,181,226,0.4)]"
+        className="object-contain drop-shadow-[0_0_12px_rgba(255,40,126,0.4)]"
         priority
       />
     </motion.div>

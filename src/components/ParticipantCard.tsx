@@ -47,7 +47,7 @@ export default function ParticipantCard({
       `}
     >
       {/* Player number badge */}
-      <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-squid-pink flex items-center justify-center">
+      <div className="absolute top-3 left-3 z-10 w-10 h-10 rounded-full bg-squid-teal flex items-center justify-center">
         <span className="font-[family-name:var(--font-heading)] text-xl text-white">
           {participant.player_number}
         </span>
@@ -105,6 +105,20 @@ export default function ParticipantCard({
           <p className="text-sm text-squid-light/60 mt-1 line-clamp-2">
             {participant.topic}
           </p>
+        )}
+        {participant.demo_url && (
+          <a
+            href={participant.demo_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 mt-2 text-sm text-squid-green hover:text-squid-green/80 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            View Demo
+          </a>
         )}
         {showVotes && (
           <div className="mt-2 flex items-center gap-2">

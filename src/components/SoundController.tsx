@@ -10,6 +10,10 @@ interface SoundControllerProps {
   onToggle: (enabled: boolean) => void;
 }
 
+const DEFAULT_VOLUME = 0.4;
+const FADE_IN_DURATION = 1.5;
+const FADE_OUT_DURATION = 0.5;
+
 export default function SoundController({
   isVoting,
   eliminatedPlayers = [],
@@ -18,9 +22,10 @@ export default function SoundController({
   onToggle,
 }: SoundControllerProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
-  const oscillatorRef = useRef<OscillatorNode | null>(null);
-  const gainRef = useRef<GainNode | null>(null);
+  const activeOscillatorsRef = useRef<OscillatorNode[]>([]);
+  const masterGainRef = useRef<GainNode | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
@@ -29,53 +34,92 @@ export default function SoundController({
     return audioContextRef.current;
   }, []);
 
+  const stopAllSounds = useCallback(() => {
+    const ctx = audioContextRef.current;
+    if (masterGainRef.current && ctx) {
+      masterGainRef.current.gain.linearRampToValueAtTime(
+        0,
+        ctx.currentTime + FADE_OUT_DURATION
+      );
+    }
+    activeOscillatorsRef.current.forEach((osc) => {
+      try {
+        osc.stop(ctx ? ctx.currentTime + FADE_OUT_DURATION : 0);
+      } catch {}
+    });
+    activeOscillatorsRef.current = [];
+    setIsPlaying(false);
+  }, []);
+
   const playDollSong = useCallback(() => {
     if (!enabled) return;
-    const ctx = getAudioContext();
-    const gain = ctx.createGain();
-    gain.gain.value = 0.15;
-    gain.connect(ctx.destination);
-    gainRef.current = gain;
 
-    // Simplified "Mugunghwa" melody using oscillators
+    const ctx = getAudioContext();
+    
+    const masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0, ctx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(DEFAULT_VOLUME, ctx.currentTime + FADE_IN_DURATION);
+    masterGain.connect(ctx.destination);
+    masterGainRef.current = masterGain;
+
+    // Accurate "Mugunghwa kkoci pieot seumnida" melody (Red Light Green Light doll song)
+    // Actual notes: B4-A4-A4 (rest) B4-A4-A4 (rest) B4-C5-B4-A4-G4 (rest) G4-A4-B4
+    const B4 = 493.88;
+    const A4 = 440.00;
+    const C5 = 523.25;
+    const G4 = 392.00;
+
     const notes = [
-      { freq: 392, dur: 0.4 }, // G4
-      { freq: 330, dur: 0.4 }, // E4
-      { freq: 330, dur: 0.4 }, // E4
-      { freq: 0, dur: 0.2 },
-      { freq: 392, dur: 0.4 }, // G4
-      { freq: 330, dur: 0.4 }, // E4
-      { freq: 330, dur: 0.4 }, // E4
-      { freq: 0, dur: 0.2 },
-      { freq: 392, dur: 0.3 }, // G4
-      { freq: 440, dur: 0.3 }, // A4
-      { freq: 392, dur: 0.3 }, // G4
-      { freq: 330, dur: 0.3 }, // E4
-      { freq: 294, dur: 0.6 }, // D4
-      { freq: 0, dur: 0.3 },
-      { freq: 294, dur: 0.3 }, // D4
-      { freq: 330, dur: 0.3 }, // E4
-      { freq: 392, dur: 0.6 }, // G4
+      // "Mu-gun-ghwa" (B-A-A)
+      { freq: B4, dur: 0.35 },
+      { freq: A4, dur: 0.35 },
+      { freq: A4, dur: 0.45 },
+      { freq: 0, dur: 0.15 },
+      // "kko-ci pi" (B-A-A)
+      { freq: B4, dur: 0.35 },
+      { freq: A4, dur: 0.35 },
+      { freq: A4, dur: 0.45 },
+      { freq: 0, dur: 0.15 },
+      // "eot seum-ni-da" (B-C-B-A-G)
+      { freq: B4, dur: 0.3 },
+      { freq: C5, dur: 0.3 },
+      { freq: B4, dur: 0.3 },
+      { freq: A4, dur: 0.3 },
+      { freq: G4, dur: 0.5 },
+      { freq: 0, dur: 0.25 },
+      // Final phrase (G-A-B)
+      { freq: G4, dur: 0.35 },
+      { freq: A4, dur: 0.35 },
+      { freq: B4, dur: 0.6 },
     ];
 
-    let time = ctx.currentTime;
+    let time = ctx.currentTime + FADE_IN_DURATION;
+    const newOscillators: OscillatorNode[] = [];
+
     notes.forEach(({ freq, dur }) => {
       if (freq > 0) {
         const osc = ctx.createOscillator();
-        osc.type = "sine";
+        const noteGain = ctx.createGain();
+
+        // Use mix of sine and triangle for childlike vocal quality
+        osc.type = time % 2 < 1 ? "sine" : "triangle";
         osc.frequency.value = freq;
 
-        const noteGain = ctx.createGain();
-        noteGain.gain.setValueAtTime(0.15, time);
-        noteGain.gain.exponentialRampToValueAtTime(0.01, time + dur - 0.05);
+        noteGain.gain.setValueAtTime(0.8, time);
+        noteGain.gain.exponentialRampToValueAtTime(0.01, time + dur - 0.03);
 
         osc.connect(noteGain);
-        noteGain.connect(ctx.destination);
+        noteGain.connect(masterGain);
         osc.start(time);
         osc.stop(time + dur);
+
+        newOscillators.push(osc);
       }
       time += dur;
     });
+
+    activeOscillatorsRef.current = newOscillators;
+    setIsPlaying(true);
   }, [enabled, getAudioContext]);
 
   const speakElimination = useCallback(
@@ -108,11 +152,19 @@ export default function SoundController({
 
   // Play doll song during voting (looped via interval)
   useEffect(() => {
-    if (!isVoting || !enabled) return;
+    if (!isVoting || !enabled) {
+      if (isPlaying) {
+        stopAllSounds();
+      }
+      return;
+    }
     playDollSong();
-    const interval = setInterval(playDollSong, 5500);
-    return () => clearInterval(interval);
-  }, [isVoting, enabled, playDollSong]);
+    const interval = setInterval(playDollSong, 6000);
+    return () => {
+      clearInterval(interval);
+      stopAllSounds();
+    };
+  }, [isVoting, enabled, playDollSong, stopAllSounds, isPlaying]);
 
   // Announce eliminations
   useEffect(() => {
@@ -126,15 +178,13 @@ export default function SoundController({
     });
   }, [triggerElimination, enabled, eliminatedPlayers, speakElimination]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (oscillatorRef.current) {
-        try { oscillatorRef.current.stop(); } catch {}
-      }
+      stopAllSounds();
       speechSynthesis.cancel();
     };
-  }, []);
+  }, [stopAllSounds]);
 
   return (
     <button

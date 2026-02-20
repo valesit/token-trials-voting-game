@@ -11,15 +11,29 @@ import EliminationOverlay from "@/components/EliminationOverlay";
 import { FloatingShapes } from "@/components/SquidShapes";
 import MuleyLogo from "@/components/MuleyLogo";
 
+const MAX_SELECTIONS = 2;
+
 export default function VotePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [session, setSession] = useState<Session | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [hasVoted, setHasVoted] = useState(false);
   const [voteSubmitting, setVoteSubmitting] = useState(false);
   const [showElimination, setShowElimination] = useState(false);
   const [error, setError] = useState("");
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else if (newSet.size < MAX_SELECTIONS) {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
 
   const fetchSession = useCallback(async () => {
     const { data: sessionData } = await supabase
@@ -74,7 +88,7 @@ export default function VotePage() {
   }, [sessionId, fetchSession]);
 
   async function submitVote() {
-    if (!selectedId) return;
+    if (selectedIds.size === 0) return;
     setVoteSubmitting(true);
     setError("");
 
@@ -85,7 +99,7 @@ export default function VotePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         session_id: sessionId,
-        participant_id: selectedId,
+        participant_ids: Array.from(selectedIds),
         device_id: deviceId,
       }),
     });
@@ -120,6 +134,7 @@ export default function VotePage() {
         eliminated={eliminated}
         survivors={survivors}
         onComplete={() => setShowElimination(false)}
+        weekNumber={session.week_number}
       />
 
       <div className="relative z-20 w-full max-w-4xl">
@@ -201,17 +216,26 @@ export default function VotePage() {
                 </div>
               ) : (
                 <>
-                  <h2 className="font-[family-name:var(--font-heading)] text-2xl text-squid-green text-center tracking-wider mb-6">
-                    CHOOSE YOUR CHAMPION
+                  <h2 className="font-[family-name:var(--font-heading)] text-2xl text-squid-green text-center tracking-wider mb-2">
+                    SELECT 1 OR 2 CHAMPIONS
                   </h2>
+                  <p className="text-squid-light/40 text-center text-sm mb-6">
+                    You can vote for up to 2 participants
+                    {selectedIds.size > 0 && (
+                      <span className="text-squid-green ml-2">
+                        ({selectedIds.size}/{MAX_SELECTIONS} selected)
+                      </span>
+                    )}
+                  </p>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     {participants.map((p) => (
                       <ParticipantCard
                         key={p.id}
                         participant={p}
-                        selected={selectedId === p.id}
-                        onClick={() => setSelectedId(p.id)}
+                        selected={selectedIds.has(p.id)}
+                        onClick={() => toggleSelection(p.id)}
+                        disabled={!selectedIds.has(p.id) && selectedIds.size >= MAX_SELECTIONS}
                       />
                     ))}
                   </div>
@@ -229,10 +253,12 @@ export default function VotePage() {
                   <div className="text-center">
                     <button
                       onClick={submitVote}
-                      disabled={!selectedId || voteSubmitting}
+                      disabled={selectedIds.size === 0 || voteSubmitting}
                       className="px-12 py-4 bg-squid-pink text-white font-[family-name:var(--font-heading)] text-2xl tracking-wider rounded-xl hover:bg-squid-pink-dark transition-all disabled:opacity-30 disabled:cursor-not-allowed pulse-glow"
                     >
-                      {voteSubmitting ? "SUBMITTING..." : "CAST VOTE"}
+                      {voteSubmitting
+                        ? "SUBMITTING..."
+                        : `CAST ${selectedIds.size === 1 ? "VOTE" : "VOTES"}`}
                     </button>
                   </div>
                 </>

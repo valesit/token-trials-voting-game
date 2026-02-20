@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-export async function POST(request: NextRequest) {
-  const { session_id, participant_id, device_id } = await request.json();
+const MAX_VOTES_PER_DEVICE = 2;
 
-  if (!session_id || !participant_id || !device_id) {
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const { session_id, participant_ids, device_id } = body;
+
+  // Support both single vote (participant_id) and multi-vote (participant_ids)
+  const participantIdList: string[] = participant_ids
+    ? participant_ids
+    : body.participant_id
+    ? [body.participant_id]
+    : [];
+
+  if (!session_id || participantIdList.length === 0 || !device_id) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 }
@@ -25,16 +35,40 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Check how many votes this device has already cast
+  const { count: existingVoteCount } = await supabase
+    .from("votes")
+    .select("*", { count: "exact", head: true })
+    .eq("session_id", session_id)
+    .eq("device_id", device_id);
+
+  const totalVotes = (existingVoteCount || 0) + participantIdList.length;
+
+  if (totalVotes > MAX_VOTES_PER_DEVICE) {
+    return NextResponse.json(
+      {
+        error: `Maximum ${MAX_VOTES_PER_DEVICE} votes allowed per device. You have ${existingVoteCount || 0} vote(s) remaining.`,
+      },
+      { status: 409 }
+    );
+  }
+
+  // Insert all votes
+  const votesToInsert = participantIdList.map((participant_id: string) => ({
+    session_id,
+    participant_id,
+    device_id,
+  }));
+
   const { data, error } = await supabase
     .from("votes")
-    .insert({ session_id, participant_id, device_id })
-    .select()
-    .single();
+    .insert(votesToInsert)
+    .select();
 
   if (error) {
     if (error.code === "23505") {
       return NextResponse.json(
-        { error: "You have already voted in this session" },
+        { error: "You have already voted for this participant" },
         { status: 409 }
       );
     }

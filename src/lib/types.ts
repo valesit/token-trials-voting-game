@@ -1,5 +1,13 @@
 export type SessionStatus = "lobby" | "voting" | "results" | "completed";
 export type ParticipantStatus = "alive" | "eliminated";
+export type SeasonStatus = "active" | "closed";
+
+export interface Season {
+  id: string;
+  name: string;
+  status: SeasonStatus;
+  created_at: string;
+}
 
 export interface Session {
   id: string;
@@ -7,6 +15,8 @@ export interface Session {
   week_number: number;
   session_date: string;
   status: SessionStatus;
+  season_id: string | null;
+  is_finale: boolean;
   created_at: string;
 }
 
@@ -19,6 +29,7 @@ export interface Participant {
   player_number: number;
   status: ParticipantStatus;
   vote_count: number;
+  demo_url: string;
   created_at: string;
 }
 
@@ -32,4 +43,8 @@ export interface Vote {
 
 export interface SessionWithParticipants extends Session {
   participants: Participant[];
+}
+
+export interface SeasonWithSessions extends Season {
+  sessions: SessionWithParticipants[];
 }

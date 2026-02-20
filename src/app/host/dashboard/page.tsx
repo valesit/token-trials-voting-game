@@ -2,48 +2,116 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Session, Participant, SessionStatus } from "@/lib/types";
+import { Session, Participant, SessionStatus, Season } from "@/lib/types";
 import SoundController from "@/components/SoundController";
 import EliminationOverlay from "@/components/EliminationOverlay";
 import MuleyLogo from "@/components/MuleyLogo";
 
 export default function HostDashboard() {
   const [sessions, setSessions] = useState<(Session & { participants: Participant[] })[]>([]);
+  const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [showElimination, setShowElimination] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showSeasonForm, setShowSeasonForm] = useState(false);
+  const [newSeasonName, setNewSeasonName] = useState("");
   const [newSession, setNewSession] = useState({ title: "", week_number: 1, session_date: "" });
   const [newParticipant, setNewParticipant] = useState({ name: "", topic: "", image_url: "" });
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ type: "session" | "season"; id: string } | null>(null);
+  const [editingDemoUrl, setEditingDemoUrl] = useState<{ id: string; url: string } | null>(null);
+
+  const activeSeason = seasons.find((s) => s.status === "active");
 
   const fetchSessions = useCallback(async () => {
     const res = await fetch("/api/sessions");
     const data = await res.json();
     setSessions(data);
-    setLoading(false);
   }, []);
 
+  const fetchSeasons = useCallback(async () => {
+    const res = await fetch("/api/seasons");
+    const data = await res.json();
+    setSeasons(data);
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    await Promise.all([fetchSessions(), fetchSeasons()]);
+    setLoading(false);
+  }, [fetchSessions, fetchSeasons]);
+
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    fetchAll();
+  }, [fetchAll]);
 
   const currentSession = sessions.find((s) => s.id === selectedSession);
   const participants = currentSession?.participants || [];
   const eliminated = participants.filter((p) => p.status === "eliminated");
   const survivors = participants.filter((p) => p.status === "alive");
 
+  async function createSeason() {
+    if (!newSeasonName.trim()) return;
+    setActionLoading(true);
+    await fetch("/api/seasons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newSeasonName }),
+    });
+    setNewSeasonName("");
+    setShowSeasonForm(false);
+    await fetchAll();
+    setActionLoading(false);
+  }
+
+  async function closeSeason() {
+    if (!activeSeason) return;
+    setActionLoading(true);
+    await fetch(`/api/seasons/${activeSeason.id}/close`, { method: "PATCH" });
+    await fetchAll();
+    setActionLoading(false);
+  }
+
+  async function deleteSession(id: string) {
+    setActionLoading(true);
+    await fetch(`/api/sessions?id=${id}`, { method: "DELETE" });
+    setConfirmDelete(null);
+    if (selectedSession === id) setSelectedSession(null);
+    await fetchAll();
+    setActionLoading(false);
+  }
+
+  async function deleteSeason(id: string) {
+    setActionLoading(true);
+    await fetch(`/api/seasons?id=${id}`, { method: "DELETE" });
+    setConfirmDelete(null);
+    await fetchAll();
+    setActionLoading(false);
+  }
+
   async function createSession() {
     setActionLoading(true);
     await fetch("/api/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newSession),
+      body: JSON.stringify({ ...newSession, season_id: activeSeason?.id }),
     });
     setNewSession({ title: "", week_number: 1, session_date: "" });
     setShowCreateForm(false);
-    await fetchSessions();
+    await fetchAll();
+    setActionLoading(false);
+  }
+
+  async function updateDemoUrl(participantId: string, demoUrl: string) {
+    setActionLoading(true);
+    await fetch("/api/participants", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: participantId, demo_url: demoUrl }),
+    });
+    setEditingDemoUrl(null);
+    await fetchAll();
     setActionLoading(false);
   }
 
@@ -111,6 +179,7 @@ export default function HostDashboard() {
         eliminated={eliminated}
         survivors={survivors}
         onComplete={() => setShowElimination(false)}
+        weekNumber={currentSession?.week_number || 1}
       />
 
       {/* Header */}
@@ -135,6 +204,120 @@ export default function HostDashboard() {
           onToggle={setSoundEnabled}
         />
       </div>
+
+      {/* Season Management */}
+      <div className="bg-squid-dark border border-squid-gold/30 rounded-2xl p-4 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="font-[family-name:var(--font-heading)] text-xl text-squid-gold tracking-wider">
+              {activeSeason ? activeSeason.name.toUpperCase() : "NO ACTIVE SEASON"}
+            </h2>
+            <p className="text-squid-light/40 text-xs">
+              {activeSeason
+                ? `${sessions.filter((s) => s.season_id === activeSeason.id && !s.is_finale).length} sessions this season`
+                : "Create a season to start tracking"}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {!activeSeason && (
+              <button
+                onClick={() => setShowSeasonForm(true)}
+                className="px-4 py-2 bg-squid-gold text-squid-black rounded-lg text-sm font-[family-name:var(--font-heading)] tracking-wider hover:bg-squid-gold/80 transition-all"
+              >
+                CREATE SEASON
+              </button>
+            )}
+            {activeSeason && (
+              <button
+                onClick={closeSeason}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-squid-red text-white rounded-lg text-sm font-[family-name:var(--font-heading)] tracking-wider hover:bg-squid-red/80 transition-all disabled:opacity-50"
+              >
+                CLOSE SEASON
+              </button>
+            )}
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {showSeasonForm && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-4"
+            >
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Season name (e.g., Season 1)"
+                  value={newSeasonName}
+                  onChange={(e) => setNewSeasonName(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-squid-black border border-squid-grey rounded-lg text-squid-light text-sm placeholder:text-squid-light/20 focus:outline-none focus:border-squid-gold"
+                />
+                <button
+                  onClick={createSeason}
+                  disabled={actionLoading || !newSeasonName.trim()}
+                  className="px-4 py-2 bg-squid-gold text-squid-black rounded-lg text-sm font-[family-name:var(--font-heading)] tracking-wider hover:bg-squid-gold/80 disabled:opacity-50 transition-all"
+                >
+                  CREATE
+                </button>
+                <button
+                  onClick={() => setShowSeasonForm(false)}
+                  className="px-4 py-2 bg-squid-grey text-squid-light rounded-lg text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-squid-black/80"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="bg-squid-dark border border-squid-red rounded-2xl p-6 max-w-md mx-4"
+            >
+              <h3 className="font-[family-name:var(--font-heading)] text-2xl text-squid-red mb-4">
+                CONFIRM DELETE
+              </h3>
+              <p className="text-squid-light/60 mb-6">
+                Are you sure you want to delete this {confirmDelete.type}? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() =>
+                    confirmDelete.type === "session"
+                      ? deleteSession(confirmDelete.id)
+                      : deleteSeason(confirmDelete.id)
+                  }
+                  disabled={actionLoading}
+                  className="flex-1 px-4 py-2 bg-squid-red text-white rounded-lg font-[family-name:var(--font-heading)] tracking-wider hover:bg-squid-red/80 disabled:opacity-50"
+                >
+                  DELETE
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 px-4 py-2 bg-squid-grey text-squid-light rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sessions List */}
@@ -197,35 +380,55 @@ export default function HostDashboard() {
 
             <div className="space-y-2 max-h-[60vh] overflow-y-auto">
               {sessions.map((session) => (
-                <button
+                <div
                   key={session.id}
-                  onClick={() => setSelectedSession(session.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all ${
+                  className={`relative group p-3 rounded-xl border transition-all ${
                     selectedSession === session.id
                       ? "border-squid-pink bg-squid-pink/10"
                       : "border-squid-grey hover:border-squid-light/20"
-                  }`}
+                  } ${session.is_finale ? "border-squid-gold/50" : ""}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-[family-name:var(--font-heading)] text-lg text-squid-light tracking-wider">
-                      WEEK {session.week_number}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        session.status === "voting"
-                          ? "bg-squid-green/20 text-squid-green"
-                          : session.status === "completed"
-                          ? "bg-squid-grey text-squid-light/40"
-                          : session.status === "results"
-                          ? "bg-squid-gold/20 text-squid-gold"
-                          : "bg-squid-pink/20 text-squid-pink"
-                      }`}
-                    >
-                      {session.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <p className="text-xs text-squid-light/40 mt-1">{session.title}</p>
-                </button>
+                  <button
+                    onClick={() => setSelectedSession(session.id)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-[family-name:var(--font-heading)] text-lg text-squid-light tracking-wider">
+                          {session.is_finale ? "FINALE" : `WEEK ${session.week_number}`}
+                        </span>
+                        {session.is_finale && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-squid-gold/20 text-squid-gold">
+                            ★
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${
+                          session.status === "voting"
+                            ? "bg-squid-green/20 text-squid-green"
+                            : session.status === "completed"
+                            ? "bg-squid-grey text-squid-light/40"
+                            : session.status === "results"
+                            ? "bg-squid-gold/20 text-squid-gold"
+                            : "bg-squid-pink/20 text-squid-pink"
+                        }`}
+                      >
+                        {session.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-squid-light/40 mt-1">{session.title}</p>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete({ type: "session", id: session.id });
+                    }}
+                    className="absolute top-3 right-10 opacity-0 group-hover:opacity-100 text-squid-red/50 hover:text-squid-red text-xs transition-all"
+                  >
+                    Delete
+                  </button>
+                </div>
               ))}
               {sessions.length === 0 && (
                 <p className="text-center text-squid-light/30 py-8 text-sm">
@@ -331,6 +534,60 @@ export default function HostDashboard() {
                             <p className="text-xs text-squid-green mt-1">
                               {p.vote_count} votes
                             </p>
+                          )}
+                          {/* Demo URL section - only for completed/results sessions */}
+                          {(currentSession.status === "completed" || currentSession.status === "results") && (
+                            <div className="mt-2">
+                              {editingDemoUrl?.id === p.id ? (
+                                <div className="flex gap-2">
+                                  <input
+                                    type="url"
+                                    placeholder="Demo URL"
+                                    value={editingDemoUrl.url}
+                                    onChange={(e) =>
+                                      setEditingDemoUrl({ ...editingDemoUrl, url: e.target.value })
+                                    }
+                                    className="flex-1 px-2 py-1 bg-squid-black border border-squid-grey rounded text-squid-light text-xs placeholder:text-squid-light/20 focus:outline-none focus:border-squid-green"
+                                  />
+                                  <button
+                                    onClick={() => updateDemoUrl(p.id, editingDemoUrl.url)}
+                                    disabled={actionLoading}
+                                    className="px-2 py-1 bg-squid-green text-white rounded text-xs"
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingDemoUrl(null)}
+                                    className="px-2 py-1 bg-squid-grey text-squid-light rounded text-xs"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  {p.demo_url ? (
+                                    <a
+                                      href={p.demo_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-squid-green hover:underline"
+                                    >
+                                      View Demo ↗
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs text-squid-light/30">No demo URL</span>
+                                  )}
+                                  <button
+                                    onClick={() =>
+                                      setEditingDemoUrl({ id: p.id, url: p.demo_url || "" })
+                                    }
+                                    className="text-xs text-squid-light/40 hover:text-squid-light"
+                                  >
+                                    {p.demo_url ? "Edit" : "Add"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         {currentSession.status === "lobby" && (

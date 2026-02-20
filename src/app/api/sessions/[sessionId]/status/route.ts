@@ -24,49 +24,66 @@ export async function PATCH(
       return NextResponse.json({ error: pError.message }, { status: 500 });
     }
 
-    // Count votes per participant
-    const { data: votes, error: vError } = await supabaseAdmin
-      .from("votes")
-      .select("participant_id")
-      .eq("session_id", sessionId);
+    // Edge case: If only 2 participants, both automatically qualify (no elimination)
+    if ((participants || []).length <= 2) {
+      // Mark all as alive (qualifiers)
+      const allIds = (participants || []).map((p) => p.id);
+      if (allIds.length > 0) {
+        await supabaseAdmin
+          .from("participants")
+          .update({ status: "alive", vote_count: 0 })
+          .in("id", allIds);
+      }
+    } else {
+      // Standard elimination logic for 3+ participants
+      // Count votes per participant
+      const { data: votes, error: vError } = await supabaseAdmin
+        .from("votes")
+        .select("participant_id")
+        .eq("session_id", sessionId);
 
-    if (vError) {
-      return NextResponse.json({ error: vError.message }, { status: 500 });
+      if (vError) {
+        return NextResponse.json({ error: vError.message }, { status: 500 });
+      }
+
+      const voteCounts: Record<string, number> = {};
+      for (const p of participants || []) {
+        voteCounts[p.id] = 0;
+      }
+      for (const v of votes || []) {
+        voteCounts[v.participant_id] = (voteCounts[v.participant_id] || 0) + 1;
+      }
+
+      // Update vote_count on each participant
+      for (const p of participants || []) {
+        await supabaseAdmin
+          .from("participants")
+          .update({ vote_count: voteCounts[p.id] || 0 })
+          .eq("id", p.id);
+      }
+
+      // Sort by votes ascending (bottom 2 are eliminated)
+      const sorted = [...(participants || [])].sort(
+        (a, b) => (voteCounts[a.id] || 0) - (voteCounts[b.id] || 0)
+      );
+
+      const eliminatedIds = sorted.slice(0, 2).map((p) => p.id);
+      const survivorIds = sorted.slice(2).map((p) => p.id);
+
+      if (eliminatedIds.length > 0) {
+        await supabaseAdmin
+          .from("participants")
+          .update({ status: "eliminated" })
+          .in("id", eliminatedIds);
+      }
+
+      if (survivorIds.length > 0) {
+        await supabaseAdmin
+          .from("participants")
+          .update({ status: "alive" })
+          .in("id", survivorIds);
+      }
     }
-
-    const voteCounts: Record<string, number> = {};
-    for (const p of participants || []) {
-      voteCounts[p.id] = 0;
-    }
-    for (const v of votes || []) {
-      voteCounts[v.participant_id] = (voteCounts[v.participant_id] || 0) + 1;
-    }
-
-    // Update vote_count on each participant
-    for (const p of participants || []) {
-      await supabaseAdmin
-        .from("participants")
-        .update({ vote_count: voteCounts[p.id] || 0 })
-        .eq("id", p.id);
-    }
-
-    // Sort by votes ascending (bottom 2 are eliminated)
-    const sorted = [...(participants || [])].sort(
-      (a, b) => (voteCounts[a.id] || 0) - (voteCounts[b.id] || 0)
-    );
-
-    const eliminatedIds = sorted.slice(0, 2).map((p) => p.id);
-    const survivorIds = sorted.slice(2).map((p) => p.id);
-
-    await supabaseAdmin
-      .from("participants")
-      .update({ status: "eliminated" })
-      .in("id", eliminatedIds);
-
-    await supabaseAdmin
-      .from("participants")
-      .update({ status: "alive" })
-      .in("id", survivorIds);
   }
 
   const { data, error } = await supabaseAdmin

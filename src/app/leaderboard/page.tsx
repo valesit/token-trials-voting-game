@@ -179,7 +179,7 @@ export default function LeaderboardPage() {
                           {/* Player number */}
                           <div
                             className={`absolute top-3 left-3 z-10 w-8 h-8 rounded-full flex items-center justify-center ${
-                              isEliminated ? "bg-squid-pink/50" : "bg-squid-green"
+                              isEliminated ? "bg-squid-pink/50" : "bg-squid-teal"
                             }`}
                           >
                             <span className="font-[family-name:var(--font-heading)] text-sm text-white">
@@ -225,6 +225,19 @@ export default function LeaderboardPage() {
                               <p className="text-xs text-squid-light/40 line-clamp-1">
                                 {p.topic}
                               </p>
+                            )}
+                            {p.demo_url && (
+                              <a
+                                href={p.demo_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 mt-1 text-xs text-squid-green hover:text-squid-green/80 transition-colors"
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                                View Demo
+                              </a>
                             )}
                             <div className="flex items-center justify-between mt-2">
                               <span className="font-[family-name:var(--font-mono)] text-sm text-squid-light/60">

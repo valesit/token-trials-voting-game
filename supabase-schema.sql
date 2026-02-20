@@ -1,6 +1,14 @@
 -- Muley SE AI Squid Games - Database Schema
 -- Run this in your Supabase SQL Editor to set up the database.
 
+-- Seasons table for quarter tracking
+CREATE TABLE seasons (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'closed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE sessions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
@@ -8,6 +16,8 @@ CREATE TABLE sessions (
   session_date DATE NOT NULL DEFAULT CURRENT_DATE,
   status TEXT NOT NULL DEFAULT 'lobby'
     CHECK (status IN ('lobby', 'voting', 'results', 'completed')),
+  season_id UUID REFERENCES seasons(id) ON DELETE SET NULL,
+  is_finale BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -21,6 +31,7 @@ CREATE TABLE participants (
   status TEXT NOT NULL DEFAULT 'alive'
     CHECK (status IN ('alive', 'eliminated')),
   vote_count INTEGER NOT NULL DEFAULT 0,
+  demo_url TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -30,19 +41,24 @@ CREATE TABLE votes (
   participant_id UUID NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
   device_id TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(session_id, device_id)
+  UNIQUE(session_id, device_id, participant_id)
 );
 
 -- Enable Realtime for live updates
 ALTER PUBLICATION supabase_realtime ADD TABLE sessions;
 ALTER PUBLICATION supabase_realtime ADD TABLE participants;
+ALTER PUBLICATION supabase_realtime ADD TABLE seasons;
 
 -- Row Level Security
+ALTER TABLE seasons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 
 -- Public read access
+CREATE POLICY "Anyone can read seasons"
+  ON seasons FOR SELECT USING (true);
+
 CREATE POLICY "Anyone can read sessions"
   ON sessions FOR SELECT USING (true);
 

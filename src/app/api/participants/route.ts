@@ -19,11 +19,18 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const body = await request.json();
-  const { id, name, topic, image_url } = body;
+  const { id, name, topic, image_url, demo_url } = body;
+
+  // Build update object with only provided fields
+  const updateData: Record<string, string> = {};
+  if (name !== undefined) updateData.name = name;
+  if (topic !== undefined) updateData.topic = topic;
+  if (image_url !== undefined) updateData.image_url = image_url;
+  if (demo_url !== undefined) updateData.demo_url = demo_url;
 
   const { data, error } = await supabaseAdmin
     .from("participants")
-    .update({ name, topic, image_url })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single();

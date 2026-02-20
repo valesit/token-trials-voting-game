@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FloatingShapes } from "@/components/SquidShapes";
+import { EnhancedFloatingShapes } from "@/components/SquidShapes";
 import { MuleyLogoImage, MuleyBadge } from "@/components/MuleyLogo";
 import SquidDoll from "@/components/SquidDoll";
 import Link from "next/link";
@@ -28,7 +28,10 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
-      <FloatingShapes />
+      {/* Red Light / Green Light ambient glow effect */}
+      <div className="fixed inset-0 red-green-light pointer-events-none z-0" />
+
+      <EnhancedFloatingShapes />
 
       {/* Scanline effect */}
       <div className="scanlines fixed inset-0 pointer-events-none z-10" />

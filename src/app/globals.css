@@ -5,6 +5,7 @@
   --color-squid-pink-dark: #cc1f64;
   --color-squid-green: #00B5E2;
   --color-squid-green-dark: #0099c4;
+  --color-squid-teal: #067A6F;
   --color-muley-blue: #00B5E2;
   --color-squid-dark: #1a1a2e;
   --color-squid-darker: #0f0f1a;
@@ -88,4 +89,49 @@ body {
 .eliminated {
   filter: grayscale(100%) brightness(0.5);
   opacity: 0.6;
+}
+
+/* Red Light Green Light ambient glow animation */
+@keyframes red-green-light {
+  0%, 100% {
+    box-shadow: 0 0 100px 50px rgba(255, 40, 126, 0.15), inset 0 0 100px rgba(255, 40, 126, 0.05);
+  }
+  50% {
+    box-shadow: 0 0 100px 50px rgba(6, 122, 111, 0.15), inset 0 0 100px rgba(6, 122, 111, 0.05);
+  }
+}
+
+.red-green-light {
+  animation: red-green-light 4s ease-in-out infinite;
+}
+
+/* Shape entrance animations */
+@keyframes shape-float-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes shape-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.25;
+  }
+}
+
+.shape-entrance {
+  animation: shape-float-in 0.8s ease-out forwards;
+}
+
+.shape-pulse {
+  animation: shape-pulse 3s ease-in-out infinite;
 }

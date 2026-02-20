@@ -1,21 +1,45 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Participant } from "@/lib/types";
+import MoneyPotAnimation from "./MoneyPotAnimation";
 
 interface EliminationOverlayProps {
   show: boolean;
   eliminated: Participant[];
   survivors: Participant[];
   onComplete?: () => void;
+  weekNumber?: number;
 }
+
+const BASE_PRIZE = 1000;
 
 export default function EliminationOverlay({
   show,
   eliminated,
   survivors,
   onComplete,
+  weekNumber = 1,
 }: EliminationOverlayProps) {
+  const [showMoneyPot, setShowMoneyPot] = useState(false);
+  const [phase, setPhase] = useState<"elimination" | "money">("elimination");
+
+  useEffect(() => {
+    if (show) {
+      setPhase("elimination");
+      setShowMoneyPot(false);
+      const timer = setTimeout(() => {
+        setShowMoneyPot(true);
+        setPhase("money");
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [show]);
+
+  const currentPotValue = weekNumber * BASE_PRIZE;
+  const previousPotValue = (weekNumber - 1) * BASE_PRIZE;
+
   return (
     <AnimatePresence>
       {show && (
@@ -121,11 +145,26 @@ export default function EliminationOverlay({
             </div>
           </motion.div>
 
+          {/* Money Pot Animation */}
+          {showMoneyPot && phase === "money" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-8"
+            >
+              <MoneyPotAnimation
+                show={showMoneyPot}
+                totalValue={currentPotValue}
+                previousValue={previousPotValue}
+              />
+            </motion.div>
+          )}
+
           {/* Dismiss button */}
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 3.5 }}
+            transition={{ delay: phase === "money" ? 6 : 3.5 }}
             onClick={onComplete}
             className="mt-10 px-8 py-3 bg-squid-grey border border-squid-light/20 rounded-full text-squid-light hover:bg-squid-pink hover:border-squid-pink transition-all font-[family-name:var(--font-heading)] text-xl tracking-wider"
           >

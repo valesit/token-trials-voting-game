@@ -3,9 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET() {
   const { data, error } = await supabaseAdmin
-    .from("sessions")
-    .select("*, participants(*)")
-    .order("week_number", { ascending: false });
+    .from("seasons")
+    .select("*, sessions(*, participants(*))")
+    .order("created_at", { ascending: false });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -15,11 +15,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { title, week_number, session_date, season_id } = body;
+  const { name } = body;
+
+  if (!name) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
 
   const { data, error } = await supabaseAdmin
-    .from("sessions")
-    .insert({ title, week_number, session_date, season_id: season_id || null })
+    .from("seasons")
+    .insert({ name, status: "active" })
     .select()
     .single();
 
@@ -31,16 +35,16 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get("id");
+  const seasonId = searchParams.get("id");
 
-  if (!sessionId) {
-    return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
+  if (!seasonId) {
+    return NextResponse.json({ error: "Season ID is required" }, { status: 400 });
   }
 
   const { error } = await supabaseAdmin
-    .from("sessions")
+    .from("seasons")
     .delete()
-    .eq("id", sessionId);
+    .eq("id", seasonId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
