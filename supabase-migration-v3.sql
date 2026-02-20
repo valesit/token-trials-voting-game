@@ -12,3 +12,8 @@ ALTER TABLE seasons ADD COLUMN IF NOT EXISTS total_prize_pot INTEGER;
 ALTER TABLE seasons DROP CONSTRAINT IF EXISTS seasons_status_check;
 ALTER TABLE seasons ADD CONSTRAINT seasons_status_check
   CHECK (status IN ('active', 'finale', 'closed'));
+
+-- 4. Allow more than 4 players per session (finales can have 6+ finalists)
+ALTER TABLE participants DROP CONSTRAINT IF EXISTS participants_player_number_check;
+ALTER TABLE participants ADD CONSTRAINT participants_player_number_check
+  CHECK (player_number BETWEEN 1 AND 99);

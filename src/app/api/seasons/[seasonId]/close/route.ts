@@ -100,7 +100,16 @@ export async function PATCH(
       vote_count: 0,
     }));
 
-    await supabaseAdmin.from("participants").insert(finaleParticipants);
+    const { error: insertError } = await supabaseAdmin
+      .from("participants")
+      .insert(finaleParticipants);
+
+    if (insertError) {
+      return NextResponse.json(
+        { error: "Failed to add finalists: " + insertError.message },
+        { status: 500 }
+      );
+    }
   }
 
   return NextResponse.json({
