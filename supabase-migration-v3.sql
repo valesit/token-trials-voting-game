@@ -21,6 +21,16 @@ ALTER TABLE participants ADD CONSTRAINT participants_player_number_check
 -- 5. Add slug column for friendly voting URLs (e.g., /vote/episode-2)
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
 
--- Backfill slugs for existing sessions
-UPDATE sessions SET slug = 'episode-' || week_number WHERE slug IS NULL AND is_finale = false;
+-- Backfill slugs for existing sessions (uses season name number + week/finale)
+UPDATE sessions s
+SET slug = 's' || COALESCE(REGEXP_REPLACE(sea.name, '\D', '', 'g'), '0') || '-ep-' || s.week_number
+FROM seasons sea
+WHERE s.season_id = sea.id AND s.slug IS NULL AND s.is_finale = false;
+
+UPDATE sessions s
+SET slug = 's' || COALESCE(REGEXP_REPLACE(sea.name, '\D', '', 'g'), '0') || '-finale'
+FROM seasons sea
+WHERE s.season_id = sea.id AND s.slug IS NULL AND s.is_finale = true;
+
+UPDATE sessions SET slug = 'ep-' || week_number WHERE slug IS NULL AND is_finale = false;
 UPDATE sessions SET slug = 'finale-' || LEFT(id::text, 8) WHERE slug IS NULL AND is_finale = true;
