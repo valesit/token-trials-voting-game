@@ -17,3 +17,10 @@ ALTER TABLE seasons ADD CONSTRAINT seasons_status_check
 ALTER TABLE participants DROP CONSTRAINT IF EXISTS participants_player_number_check;
 ALTER TABLE participants ADD CONSTRAINT participants_player_number_check
   CHECK (player_number BETWEEN 1 AND 99);
+
+-- 5. Add slug column for friendly voting URLs (e.g., /vote/episode-2)
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
+
+-- Backfill slugs for existing sessions
+UPDATE sessions SET slug = 'episode-' || week_number WHERE slug IS NULL AND is_finale = false;
+UPDATE sessions SET slug = 'finale-' || LEFT(id::text, 8) WHERE slug IS NULL AND is_finale = true;

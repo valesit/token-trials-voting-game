@@ -13,6 +13,7 @@ CREATE TABLE seasons (
 
 CREATE TABLE sessions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  slug TEXT UNIQUE,
   title TEXT NOT NULL,
   week_number INTEGER NOT NULL,
   session_date DATE NOT NULL DEFAULT CURRENT_DATE,

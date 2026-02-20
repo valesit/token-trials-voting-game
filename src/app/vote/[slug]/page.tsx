@@ -13,7 +13,7 @@ import { FloatingShapes } from "@/components/SquidShapes";
 import MuleyLogo from "@/components/MuleyLogo";
 
 export default function VotePage() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [session, setSession] = useState<Session | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -25,7 +25,6 @@ export default function VotePage() {
   const [runningPotTotal, setRunningPotTotal] = useState(0);
   const [previousPotTotal, setPreviousPotTotal] = useState(0);
 
-  // Finale with 2 players = vote for 1 only; regular sessions = up to 2
   const maxSelections = session?.is_finale ? 1 : 2;
 
   const toggleSelection = (id: string) => {
@@ -41,51 +40,72 @@ export default function VotePage() {
   };
 
   const fetchSession = useCallback(async () => {
-    const { data: sessionData } = await supabase
-      .from("sessions")
-      .select("*")
-      .eq("id", sessionId)
-      .single();
+    // Look up session by slug (friendly URL), fall back to UUID for backward compat
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
-    const { data: participantData } = await supabase
-      .from("participants")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("player_number");
+    let sessionData: Session | null = null;
 
-    if (sessionData) setSession(sessionData);
-    if (participantData) setParticipants(participantData);
-
-    // Fetch all sessions in the same season to compute prize pot
-    if (sessionData?.season_id) {
-      const { data: seasonSessions } = await supabase
+    if (isUuid) {
+      const { data } = await supabase
         .from("sessions")
-        .select("week_number, pot_contribution, is_finale")
-        .eq("season_id", sessionData.season_id);
+        .select("*")
+        .eq("id", slug)
+        .single();
+      sessionData = data;
+    } else {
+      const { data } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("slug", slug)
+        .single();
+      sessionData = data;
+    }
 
-      if (seasonSessions) {
-        const total = seasonSessions
-          .filter((s) => !s.is_finale)
-          .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
-        setRunningPotTotal(total);
+    if (sessionData) {
+      setSession(sessionData);
 
-        const previous = seasonSessions
-          .filter(
-            (s) =>
-              !s.is_finale && s.week_number < sessionData.week_number
-          )
-          .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
-        setPreviousPotTotal(previous);
+      const { data: participantData } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("session_id", sessionData.id)
+        .order("player_number");
+
+      if (participantData) setParticipants(participantData);
+
+      if (sessionData.season_id) {
+        const { data: seasonSessions } = await supabase
+          .from("sessions")
+          .select("week_number, pot_contribution, is_finale")
+          .eq("season_id", sessionData.season_id);
+
+        if (seasonSessions) {
+          const total = seasonSessions
+            .filter((s) => !s.is_finale)
+            .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
+          setRunningPotTotal(total);
+
+          const previous = seasonSessions
+            .filter(
+              (s) =>
+                !s.is_finale && s.week_number < sessionData!.week_number
+            )
+            .reduce((sum, s) => sum + (s.pot_contribution ?? 25), 0);
+          setPreviousPotTotal(previous);
+        }
       }
     }
-  }, [sessionId]);
+  }, [slug]);
 
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
 
-  // Real-time subscription for session status changes
+  // Real-time subscription using the session UUID once resolved
+  const sessionId = session?.id;
+
   useEffect(() => {
+    if (!sessionId) return;
+
     const channel = supabase
       .channel(`session-${sessionId}`)
       .on(
@@ -115,7 +135,7 @@ export default function VotePage() {
   }, [sessionId, fetchSession]);
 
   async function submitVote() {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0 || !session) return;
     setVoteSubmitting(true);
     setError("");
 
@@ -125,7 +145,7 @@ export default function VotePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        session_id: sessionId,
+        session_id: session.id,
         participant_ids: Array.from(selectedIds),
         device_id: deviceId,
       }),
@@ -166,7 +186,6 @@ export default function VotePage() {
         isFinale={session.is_finale}
       />
 
-      {/* Sound controller - top right */}
       <div className="fixed top-4 right-4 z-30">
         <SoundController
           isVoting={session.status === "voting"}
@@ -181,7 +200,6 @@ export default function VotePage() {
       </div>
 
       <div className="relative z-20 w-full max-w-4xl">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -202,7 +220,6 @@ export default function VotePage() {
           </div>
         </motion.div>
 
-        {/* Lobby state */}
         <AnimatePresence mode="wait">
           {session.status === "lobby" && (
             <motion.div
@@ -230,7 +247,6 @@ export default function VotePage() {
             </motion.div>
           )}
 
-          {/* Voting state */}
           {session.status === "voting" && (
             <motion.div
               key="voting"
@@ -311,7 +327,6 @@ export default function VotePage() {
             </motion.div>
           )}
 
-          {/* Results state */}
           {(session.status === "results" || session.status === "completed") && (
             <motion.div
               key="results"

@@ -15,7 +15,21 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { title, week_number, session_date, season_id, pot_contribution } = body;
+  const { title, week_number, session_date, season_id, pot_contribution, slug } = body;
+
+  const generatedSlug = slug || `episode-${week_number}`;
+
+  // Ensure slug uniqueness by appending a suffix if needed
+  let finalSlug = generatedSlug;
+  const { data: existing } = await supabaseAdmin
+    .from("sessions")
+    .select("id")
+    .eq("slug", generatedSlug)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    finalSlug = `${generatedSlug}-${Date.now().toString(36).slice(-4)}`;
+  }
 
   const { data, error } = await supabaseAdmin
     .from("sessions")
@@ -25,6 +39,7 @@ export async function POST(request: NextRequest) {
       session_date,
       season_id: season_id || null,
       pot_contribution: pot_contribution ?? 25,
+      slug: finalSlug,
     })
     .select()
     .single();

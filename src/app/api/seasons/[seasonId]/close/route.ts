@@ -69,6 +69,9 @@ export async function PATCH(
 
   // Create the Season Finale session with all finalists
   const finaleTitle = `${season.name} - Season Finale`;
+  const seasonNum = season.name.replace(/\D/g, "") || "1";
+  const finaleSlug = `season-${seasonNum}-finale`;
+
   const { data: finaleSession, error: finaleError } = await supabaseAdmin
     .from("sessions")
     .insert({
@@ -79,6 +82,7 @@ export async function PATCH(
       season_id: seasonId,
       is_finale: true,
       pot_contribution: 0,
+      slug: finaleSlug,
     })
     .select()
     .single();

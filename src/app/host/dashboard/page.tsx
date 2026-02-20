@@ -501,8 +501,8 @@ export default function HostDashboard() {
                       </span>
                       {" | "}
                       Share voting link:{" "}
-                      <span className="text-squid-green font-[family-name:var(--font-mono)] text-xs">
-                        /vote/{currentSession.id}
+                      <span className="text-squid-green font-[family-name:var(--font-mono)] text-xs select-all">
+                        trialbytokens.com/vote/{currentSession.slug || currentSession.id}
                       </span>
                     </p>
                     {!currentSession.is_finale && isCurrentSessionFromActiveSeason && (

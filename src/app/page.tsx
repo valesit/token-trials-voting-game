@@ -122,7 +122,7 @@ export default function Home() {
         >
           {activeSession && (
             <Link
-              href={`/vote/${activeSession.id}`}
+              href={`/vote/${activeSession.slug || activeSession.id}`}
               className="px-8 py-4 bg-squid-pink text-white font-[family-name:var(--font-heading)] text-2xl tracking-wider rounded-xl hover:bg-squid-pink-dark transition-all pulse-glow"
             >
               {activeSession.status === "voting"

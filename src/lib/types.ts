@@ -13,6 +13,7 @@ export interface Season {
 
 export interface Session {
   id: string;
+  slug: string;
   title: string;
   week_number: number;
   session_date: string;
