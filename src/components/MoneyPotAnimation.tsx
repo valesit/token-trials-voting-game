@@ -92,7 +92,7 @@ export default function MoneyPotAnimation({
       transition: {
         duration: 1.5,
         delay: 0.5 + i * 0.1,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     }),
   };
