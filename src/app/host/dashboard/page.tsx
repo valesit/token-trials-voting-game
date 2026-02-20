@@ -7,15 +7,18 @@ import SoundController from "@/components/SoundController";
 import EliminationOverlay from "@/components/EliminationOverlay";
 import MuleyLogo from "@/components/MuleyLogo";
 
+type SessionWithParticipants = Session & { participants: Participant[] };
+type SeasonWithSessions = Season & { sessions: SessionWithParticipants[] };
+
 export default function HostDashboard() {
-  const [sessions, setSessions] = useState<(Session & { participants: Participant[] })[]>([]);
-  const [seasons, setSeasons] = useState<Season[]>([]);
+  const [seasons, setSeasons] = useState<SeasonWithSessions[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [showElimination, setShowElimination] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSeasonForm, setShowSeasonForm] = useState(false);
+  const [showPastSeasons, setShowPastSeasons] = useState(false);
   const [newSeasonName, setNewSeasonName] = useState("");
   const [newSession, setNewSession] = useState({ title: "", week_number: 1, session_date: "", pot_contribution: 25 });
   const [newParticipant, setNewParticipant] = useState({ name: "", topic: "", image_url: "" });
@@ -24,39 +27,31 @@ export default function HostDashboard() {
   const [editingDemoUrl, setEditingDemoUrl] = useState<{ id: string; url: string } | null>(null);
 
   const activeSeason = seasons.find((s) => s.status === "active" || s.status === "finale");
+  const pastSeasons = seasons.filter((s) => s.status === "closed");
 
-  const fetchSessions = useCallback(async () => {
-    const res = await fetch("/api/sessions");
-    const data = await res.json();
-    setSessions(data);
-  }, []);
+  const activeSeasonSessions = activeSeason?.sessions || [];
+  const allActiveSessions = activeSeasonSessions;
 
-  const fetchSeasons = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     const res = await fetch("/api/seasons");
     const data = await res.json();
     setSeasons(data);
-  }, []);
-
-  const fetchAll = useCallback(async () => {
-    await Promise.all([fetchSessions(), fetchSeasons()]);
     setLoading(false);
-  }, [fetchSessions, fetchSeasons]);
+  }, []);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-  const currentSession = sessions.find((s) => s.id === selectedSession);
+  const currentSession = allActiveSessions.find((s) => s.id === selectedSession)
+    || pastSeasons.flatMap((s) => s.sessions).find((s) => s.id === selectedSession);
   const participants = currentSession?.participants || [];
   const eliminated = participants.filter((p) => p.status === "eliminated");
   const survivors = participants.filter((p) => p.status === "alive");
 
-  const seasonSessions = activeSeason
-    ? sessions.filter((s) => s.season_id === activeSeason.id)
-    : [];
-  const runningPotTotal = seasonSessions.reduce((sum, s) => sum + (s.pot_contribution || 25), 0);
+  const runningPotTotal = activeSeasonSessions.reduce((sum, s) => sum + (s.pot_contribution || 25), 0);
   const previousPotTotal = currentSession
-    ? seasonSessions
+    ? activeSeasonSessions
         .filter((s) => s.week_number < currentSession.week_number && !s.is_finale)
         .reduce((sum, s) => sum + (s.pot_contribution || 25), 0)
     : 0;
@@ -142,7 +137,7 @@ export default function HostDashboard() {
       }),
     });
     setNewParticipant({ name: "", topic: "", image_url: "" });
-    await fetchSessions();
+    await fetchAll();
     setActionLoading(false);
   }
 
@@ -165,7 +160,7 @@ export default function HostDashboard() {
   async function removeParticipant(id: string) {
     setActionLoading(true);
     await fetch(`/api/participants?id=${id}`, { method: "DELETE" });
-    await fetchSessions();
+    await fetchAll();
     setActionLoading(false);
   }
 
@@ -175,6 +170,9 @@ export default function HostDashboard() {
     results: { next: "completed", label: "COMPLETE SESSION", color: "bg-squid-gold text-squid-black" },
     completed: { next: "completed", label: "SESSION ENDED", color: "bg-squid-grey" },
   };
+
+  const isCurrentSessionFromActiveSeason = currentSession && activeSeason
+    && currentSession.season_id === activeSeason.id;
 
   if (loading) {
     return (
@@ -237,7 +235,7 @@ export default function HostDashboard() {
             </div>
             <p className="text-squid-light/40 text-xs">
               {activeSeason
-                ? `${seasonSessions.filter((s) => !s.is_finale).length} sessions · Prize Pot: $${runningPotTotal}`
+                ? `${activeSeasonSessions.filter((s) => !s.is_finale).length} sessions · Prize Pot: $${runningPotTotal}`
                 : "Create a season to start tracking"}
             </p>
           </div>
@@ -343,7 +341,7 @@ export default function HostDashboard() {
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sessions List */}
+        {/* Sessions List - CURRENT SEASON ONLY */}
         <div className="lg:col-span-1">
           <div className="bg-squid-dark border border-squid-grey rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
@@ -416,7 +414,14 @@ export default function HostDashboard() {
             </AnimatePresence>
 
             <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {sessions.map((session) => (
+              {allActiveSessions.length === 0 && (
+                <p className="text-center text-squid-light/30 py-8 text-sm">
+                  {activeSeason ? "No sessions yet. Create one to get started." : "Create a season first."}
+                </p>
+              )}
+              {allActiveSessions
+                .sort((a, b) => a.week_number - b.week_number)
+                .map((session) => (
                 <div
                   key={session.id}
                   className={`relative group p-3 rounded-xl border transition-all ${
@@ -472,11 +477,6 @@ export default function HostDashboard() {
                   </button>
                 </div>
               ))}
-              {sessions.length === 0 && (
-                <p className="text-center text-squid-light/30 py-8 text-sm">
-                  No sessions yet. Create one to get started.
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -503,19 +503,19 @@ export default function HostDashboard() {
                         /vote/{currentSession.id}
                       </span>
                     </p>
-                    {!currentSession.is_finale && (
+                    {!currentSession.is_finale && isCurrentSessionFromActiveSeason && (
                       <p className="text-squid-gold/60 text-xs mt-1">
                         Session contribution: ${currentSession.pot_contribution || 25} · Running total: ${runningPotTotal}
                       </p>
                     )}
-                    {currentSession.is_finale && (
+                    {currentSession.is_finale && isCurrentSessionFromActiveSeason && (
                       <p className="text-squid-gold text-sm mt-1 font-[family-name:var(--font-heading)] tracking-wider">
                         SEASON FINALE · PRIZE POT: ${runningPotTotal}
                       </p>
                     )}
                   </div>
 
-                  {currentSession.status !== "completed" && (
+                  {currentSession.status !== "completed" && isCurrentSessionFromActiveSeason && (
                     <button
                       onClick={() =>
                         updateSessionStatus(statusFlow[currentSession.status].next)
@@ -641,7 +641,7 @@ export default function HostDashboard() {
                             </div>
                           )}
                         </div>
-                        {currentSession.status === "lobby" && !currentSession.is_finale && (
+                        {currentSession.status === "lobby" && !currentSession.is_finale && isCurrentSessionFromActiveSeason && (
                           <button
                             onClick={() => removeParticipant(p.id)}
                             className="text-squid-red/50 hover:text-squid-red text-sm transition-colors"
@@ -653,8 +653,7 @@ export default function HostDashboard() {
                     ))}
                 </div>
 
-                {/* Add Participant form - only for regular sessions in lobby */}
-                {currentSession.status === "lobby" && !currentSession.is_finale && participants.length < 4 && (
+                {currentSession.status === "lobby" && !currentSession.is_finale && isCurrentSessionFromActiveSeason && participants.length < 4 && (
                   <div className="border-t border-squid-grey pt-4">
                     <h4 className="font-[family-name:var(--font-heading)] text-lg text-squid-light/60 tracking-wider mb-3">
                       ADD PLAYER
@@ -714,6 +713,108 @@ export default function HostDashboard() {
           )}
         </div>
       </div>
+
+      {/* Past Seasons Section */}
+      {pastSeasons.length > 0 && (
+        <div className="mt-8">
+          <button
+            onClick={() => setShowPastSeasons(!showPastSeasons)}
+            className="flex items-center gap-3 mb-4 group"
+          >
+            <h2 className="font-[family-name:var(--font-heading)] text-2xl text-squid-light/40 tracking-wider group-hover:text-squid-light/60 transition-colors">
+              PAST SEASONS ({pastSeasons.length})
+            </h2>
+            <motion.span
+              animate={{ rotate: showPastSeasons ? 180 : 0 }}
+              className="text-squid-light/40"
+            >
+              ▼
+            </motion.span>
+          </button>
+
+          <AnimatePresence>
+            {showPastSeasons && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden space-y-4"
+              >
+                {pastSeasons.map((season) => (
+                  <div
+                    key={season.id}
+                    className="bg-squid-dark border border-squid-grey/50 rounded-2xl p-5"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-[family-name:var(--font-heading)] text-xl text-squid-light/60 tracking-wider">
+                            {season.name.toUpperCase()}
+                          </h3>
+                          {season.winner_name && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-squid-gold/20 text-squid-gold">
+                              Winner: {season.winner_name}
+                            </span>
+                          )}
+                          {season.total_prize_pot && (
+                            <span className="text-xs text-squid-gold/60">
+                              ${season.total_prize_pot} pot
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-squid-light/30 text-xs mt-1">
+                          {season.sessions.length} sessions · Closed
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setConfirmDelete({ type: "season", id: season.id })}
+                        className="text-squid-red/40 hover:text-squid-red text-xs transition-colors"
+                      >
+                        Delete Season
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {season.sessions
+                        .sort((a, b) => a.week_number - b.week_number)
+                        .map((s) => (
+                        <div
+                          key={s.id}
+                          className={`relative group flex items-center justify-between p-2 rounded-lg border border-squid-grey/30 hover:border-squid-light/20 transition-all cursor-pointer ${
+                            selectedSession === s.id ? "border-squid-pink/50 bg-squid-pink/5" : ""
+                          }`}
+                          onClick={() => setSelectedSession(s.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-[family-name:var(--font-heading)] text-sm text-squid-light/50 tracking-wider">
+                              {s.is_finale ? "FINALE ★" : `WEEK ${s.week_number}`}
+                            </span>
+                            <span className="text-xs text-squid-light/30">{s.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-squid-light/30">
+                              {s.participants.length} players
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmDelete({ type: "session", id: s.id });
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-squid-red/40 hover:text-squid-red text-xs transition-all"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

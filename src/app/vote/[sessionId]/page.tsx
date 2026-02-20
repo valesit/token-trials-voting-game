@@ -8,6 +8,7 @@ import { Session, Participant } from "@/lib/types";
 import { getDeviceId } from "@/lib/device-id";
 import ParticipantCard from "@/components/ParticipantCard";
 import EliminationOverlay from "@/components/EliminationOverlay";
+import SoundController from "@/components/SoundController";
 import { FloatingShapes } from "@/components/SquidShapes";
 import MuleyLogo from "@/components/MuleyLogo";
 
@@ -22,6 +23,9 @@ export default function VotePage() {
   const [voteSubmitting, setVoteSubmitting] = useState(false);
   const [showElimination, setShowElimination] = useState(false);
   const [error, setError] = useState("");
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [runningPotTotal, setRunningPotTotal] = useState(0);
+  const [previousPotTotal, setPreviousPotTotal] = useState(0);
 
   const toggleSelection = (id: string) => {
     setSelectedIds((prev) => {
@@ -50,6 +54,30 @@ export default function VotePage() {
 
     if (sessionData) setSession(sessionData);
     if (participantData) setParticipants(participantData);
+
+    // Fetch all sessions in the same season to compute prize pot
+    if (sessionData?.season_id) {
+      const { data: seasonSessions } = await supabase
+        .from("sessions")
+        .select("week_number, pot_contribution, is_finale")
+        .eq("season_id", sessionData.season_id);
+
+      if (seasonSessions) {
+        const total = seasonSessions.reduce(
+          (sum, s) => sum + (s.pot_contribution || 25),
+          0
+        );
+        setRunningPotTotal(total);
+
+        const previous = seasonSessions
+          .filter(
+            (s) =>
+              !s.is_finale && s.week_number < sessionData.week_number
+          )
+          .reduce((sum, s) => sum + (s.pot_contribution || 25), 0);
+        setPreviousPotTotal(previous);
+      }
+    }
   }, [sessionId]);
 
   useEffect(() => {
@@ -67,7 +95,6 @@ export default function VotePage() {
           const updated = payload.new as Session;
           setSession(updated);
           if (updated.status === "results") {
-            // Re-fetch participants to get updated statuses
             fetchSession();
             setTimeout(() => setShowElimination(true), 500);
           }
@@ -134,10 +161,24 @@ export default function VotePage() {
         eliminated={eliminated}
         survivors={survivors}
         onComplete={() => setShowElimination(false)}
-        currentPotValue={0}
-        previousPotValue={0}
+        currentPotValue={runningPotTotal}
+        previousPotValue={previousPotTotal}
         isFinale={session.is_finale}
       />
+
+      {/* Sound controller - top right */}
+      <div className="fixed top-4 right-4 z-30">
+        <SoundController
+          isVoting={session.status === "voting"}
+          eliminatedPlayers={eliminated.map((p) => ({
+            player_number: p.player_number,
+            name: p.name,
+          }))}
+          triggerElimination={showElimination}
+          enabled={soundEnabled}
+          onToggle={setSoundEnabled}
+        />
+      </div>
 
       <div className="relative z-20 w-full max-w-4xl">
         {/* Header */}
